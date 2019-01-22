@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>完善订阅发布模式</title>
+</head>
+<body>
+    <script>
+        let Event = (function() {
+            /*
+            list = {
+                a: [fn],
+                b: [fn]
+            }
+            */
+            let list = {},
+                listen,
+                trigger,
+                remove;
+            listen = function(key, fn) {
+                list[key] = list[key] || [];
+                list[key].push(fn);
+            };
+            trigger = function() {
+                let key = Array.prototype.shift.call(arguments);
+                    fns = list[key];
+                    if(!fns || fns.length === 0) return false;
+                    for(let fn of fns ) {
+                        //这里因为上面arguments被shift了一个，['button']
+                        fn.apply(this, arguments);
+                    }
+            };
+            remove = function (key, fn) {
+                var fns = list[key];
+                //如果不存在该key则跳出
+                if (!fns) {
+                    return false;
+                }
+                //如果remove第二个参数不传，表示全部删除，并且数组清空
+                if (!fn) {
+                    fns && (fns.length = 0);
+                } else {
+                    for (var i = fns.length - 1; i >= 0; i--) {
+                        var _fn = fns[i];
+                        if (_fn === fn) {
+                            fns.splice(i, 1);
+                        }
+                    }
+                }
+            };
+            return {
+                listen,
+                trigger,
+                remove
+            }    
+        })();
+        Event.listen('click', function (type) {
+            console.log('event: ' + type + ' click');
+        });
+        Event.trigger('click', 'button');
+        Event.trigger('click', 'aaa');
+    </script>
+</body>
+</html>

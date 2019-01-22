@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>简单实现</title>
+</head>
+<body>
+    <script>
+        let Observe = {
+    list: [],
+    on(fn) {
+        this.list.push(fn);
+    },
+    subscribe() {
+        for(let fn of this.list) {
+            fn();
+        }
+    }
+};
+let click = function() {
+    console.log('click')
+}
+let hover  = function () {
+    console.log('hover ')
+}
+Observe.on(click);
+Observe.on(hover);
+Observe.subscribe();
+    </script>
+</body>
+</html>
