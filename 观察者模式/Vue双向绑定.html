@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Vue双向绑定</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <input type="text" v-model="msg">
+        <div>{{msg}}</div>
+        {{msg}}
+    </div>
+    <script>
+        class Vue {
+            constructor(options) {
+                this.$options = options;
+                let data = this._data = options.data;
+                this.$el = document.querySelector('#app');
+                this.__subs = {};
+                //数据劫持
+                this.observe(data);
+                //数据代理
+                for(let key of Object.keys(data)) {
+                    Object.defineProperty(this, key, {
+                        configurable: true,
+                        get() {
+                            return data[key];
+                        },
+                        set(newVal) {
+                            data[key] = newVal;
+                        }
+                    })
+                }
+                //编译
+                this.compile(this.$el, data);
+            }
+            //数据劫持
+            observe(data) {
+                let _this = this;
+                for(let [key, val] of Object.entries(data)) {
+                    this.__subs[key] = [];
+                    Object.defineProperty(data, key, {
+                        get() {
+                            return val;
+                        },
+                        set(newVal) {
+                            if(val === newVal) return false;
+                            val = newVal;
+                            _this.notify(key, data);
+                        }
+                    })
+                    if(typeof val == 'object' ) {
+                        this.observe(val);
+                    }
+                }
+            }
+            compile(node, data) {
+                let parentNode = node.childNodes;
+                [...parentNode].forEach(node => {
+                    //文本节点
+                    if(node.nodeType === 3) {
+                        let text = node.textContent;
+                        let reg = /\{\{(.*?)\}\}/g;
+                        if(reg.test(text)) {
+                            node.textContent= text.replace(reg, (match, placeholder) => {
+                                //添加消息接口
+                                this.__subs[placeholder].push((value) => {
+                                    node.textContent = value;
+                                })
+                                return placeholder.split('.').reduce((val, key) => {
+                                    return val[key]
+                                }, data);
+                            })
+                        }
+                    }
+                    //元素节点
+                    if(node.nodeType === 1) {
+                        if( node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {
+                            let nodeAttr = node.attributes;
+                            [...nodeAttr].forEach(attr => {
+                                let name = attr.name;   //属性名
+                                let exp = attr.value;   //属性值
+                                if(name.includes('v-model')) {
+                                    node.value = data[exp];
+                                    //添加消息接口
+                                    this.__subs[exp].push((value) => {
+                                        node.value = value;
+                                    })
+                                }
+                                node.addEventListener('input', (e) => {
+                                    let newValue = e.target.value;
+                                    this[exp] = newValue;
+                                })
+                            })
+                        }
+                        //递归
+                        if(node.childNodes && node.childNodes.length) {
+                            this.compile(node, data);
+                        }
+                    }
+                });
+            }
+            notify(key, data) {
+                let subs = this.__subs,
+                    fns;
+                for(let _key of Object.keys(subs)) {
+                    if(key === _key) {
+                        fns = subs[_key];
+                        break;
+                    }
+                }
+                for(let fn of fns) {
+                    fn(data[key]);
+                }
+            }
+        }
+        let vm = new Vue({
+            el: '#app',
+            data: {
+                msg: 'aaa'
+            }
+        })
+    </script>
+</body>
+
+</html>
